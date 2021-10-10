@@ -109,7 +109,7 @@ async function setup(nat, mem) {
     await vboxmanage(imgName, "startvm", " --type headless");
 
     const timeout = 15 * 60 * 1000; // 15 minutes, in milliseconds
-    await vboxmanage(imgName, "guestproperty wait", "'/VirtualBox/GuestInfo/OS/NoLoggedInUsers' --timeout=" + timeout);
+    await vboxmanage(imgName, "guestproperty wait", "'/VirtualBox/GuestInfo/OS/NoLoggedInUsers' --timeout " + timeout);
 
 
 
