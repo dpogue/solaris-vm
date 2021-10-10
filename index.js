@@ -15,57 +15,6 @@ async function execSSH(cmd, desp = "") {
   await exec.exec("ssh -t solaris", [], { input: cmd });
 }
 
-
-async function getScreenText(vmName) {
-  let png = path.join(__dirname, "/screen.png");
-  await vboxmanage(vmName, "controlvm", "screenshotpng  " + png);
-  await exec.exec("sudo chmod 666 " + png);
-  let output = "";
-  await exec.exec("pytesseract  " + png, [], {
-    listeners: {
-      stdout: (s) => {
-        output += s;
-      }
-    }
-  });
-  return output;
-}
-
-async function waitFor(vmName, tag) {
-
-  let slept = 0;
-  while (true) {
-    slept += 1;
-    if (slept >= 300) {
-      throw new Error("Timeout can not boot");
-    }
-    await sleep(1000);
-
-    let output = await getScreenText(vmName);
-
-    if (tag) {
-      if (output.includes(tag)) {
-        core.info("OK");
-        await sleep(1000);
-        return true;
-      } else {
-        core.info("Checking, please wait....");
-      }
-    } else {
-      if (!output.trim()) {
-        core.info("OK");
-        return true;
-      } else {
-        core.info("Checking, please wait....");
-      }
-    }
-
-  }
-
-  return false;
-}
-
-
 async function vboxmanage(vmName, cmd, args = "") {
   await exec.exec("sudo  vboxmanage " + cmd + "   " + vmName + "   " + args);
 }
@@ -102,11 +51,6 @@ async function setup(nat, mem) {
         //
       });
     }
-
-
-    core.info("Install tesseract");
-    await exec.exec("brew install tesseract");
-    await exec.exec("pip3 install pytesseract");
 
 
     let imgName = "sol-11_4-vbox";
@@ -164,11 +108,9 @@ async function setup(nat, mem) {
 
     await vboxmanage(imgName, "startvm", " --type headless");
 
-    await waitFor(imgName, "Loading NVIDIA Kernel Mode Setting Driver for UNIX platforms");
-    await sleep(1000);
+    const timeout = 15 * 60 * 1000; // 15 minutes, in milliseconds
+    await vboxmanage(imgName, "guestproperty wait", "'/VirtualBox/GuestInfo/OS/NoLoggedInUsers' --timeout=" + timeout);
 
-    await waitFor(imgName, "Hostname: solaris");
-    await sleep(1000);
 
 
     let sshHome = path.join(process.env["HOME"], ".ssh");
